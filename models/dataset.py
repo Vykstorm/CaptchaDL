@@ -286,8 +286,9 @@ class CaptchaDataset:
             test_samples = list(frozenset(range(0, self.num_samples)) - frozenset(train_samples))
 
             # Now we shuffle again train/test sets
-            train_samples = sklearn.utils.shuffle(train_samples, random_state=random_state)
-            test_samples = sklearn.utils.shuffle(test_samples, random_state=random_state)
+            if shuffle:
+                train_samples = sklearn.utils.shuffle(train_samples, random_state=random_state)
+                test_samples = sklearn.utils.shuffle(test_samples, random_state=random_state)
 
         # Returns the result of the train/test split
         return train_samples, test_samples
