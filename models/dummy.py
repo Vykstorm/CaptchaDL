@@ -28,10 +28,13 @@ class DummyModel(Model):
 
 if __name__ == '__main__':
     from dataset import CaptchaDataset
+    from input import InputFlow
+
     dataset = CaptchaDataset()
+    input = InputFlow(dataset.X, dataset.y, batch_size=16)
 
     model = DummyModel()
     model.compile()
     #model.summary()
-    model.fit(dataset.X, dataset.y, verbose=True, epochs=1, batch_size=8)
+    model.fit_generator(input, verbose=True, epochs=1)
     print(model.evaluate(dataset.X, dataset.y))

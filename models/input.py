@@ -128,6 +128,7 @@ class InputFlow:
 
 if __name__ == '__main__':
     from dataset import CaptchaDataset
+    
     dataset = CaptchaDataset()
     it = iter(InputFlow(dataset.X, dataset.y, generate_samples=4000 ))
     X_batch, y_batch = next(it)

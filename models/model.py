@@ -5,7 +5,7 @@ from keras.layers import Input
 
 from dataset import CaptchaDataset
 from metrics import *
-
+from input import InputFlow
 
 class Model(keras.models.Model):
     '''
@@ -27,6 +27,23 @@ class Model(keras.models.Model):
         Fits the model with the training data.
         '''
         return super().fit(X, [y[:, k, :] for k in range(y.shape[1])], **kwargs)
+
+    def fit_generator(self, generator, steps_per_epoch=None, **kwargs):
+        '''
+        Fits the model with the training data provided by the given generator
+        (an instance of the class InputFlow, generator object or iterator)
+        '''
+        if not steps_per_epoch and isinstance(generator, InputFlow):
+            num_samples, batch_size = generator.y.shape[0], generator.batch_size
+            steps_per_epoch = num_samples // batch_size
+            generator = iter(generator)
+
+        def generator_wrapper():
+            while True:
+                X_batch, y_batch = next(generator)
+                yield (X_batch, [y_batch[:, k, :] for k in range(0, y_batch.shape[1])])
+
+        super().fit_generator(generator_wrapper(), steps_per_epoch, **kwargs)
 
     def compile(self, **kwargs):
         '''
