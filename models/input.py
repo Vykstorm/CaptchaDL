@@ -4,6 +4,7 @@ from the dataset for the deep learning models train/evaluate methods
 '''
 
 from itertools import product, islice
+from functools import lru_cache
 
 import keras
 from keras.layers import Input, Flatten, Dense
@@ -54,6 +55,64 @@ class InputFlow:
         self.image_generator = ImageGenerator()
 
 
+    @property
+    @lru_cache(maxsize=1)
+    def repetitions(self):
+        y = self.y
+        batch_size, generate_samples = self.batch_size, self.generate_samples
+
+
+        if generate_samples == 0:
+            return np.ones([y.shape[0]]).astype(np.uint32)
+
+        def normalize(x, bounds=(0, 1)):
+            return ((x - x.min()) / (x.max() - x.min())) * bounds[1] + bounds[0]
+
+        def clamp(x, bounds=(0, 1)):
+            return np.maximum(np.minimum(x, bounds[1]), bounds[0])
+
+        # Set numpy random state
+        np.random.seed(self.random_state)
+
+        # Get char frequencies
+        char_f = y.sum(axis=1).sum(axis=0)
+        char_f_nz = char_f[char_f > 0]
+        char_f = clamp(char_f, (char_f_nz.min(), char_f_nz.max()))
+        char_f_score = 1 - np.power(normalize(char_f), 1)
+
+        # Calculate samples ranking
+        rankings = normalize(np.multiply(y, char_f_score.reshape(1, 1, -1)).sum(axis=2).sum(axis=1))
+
+
+        # Now calculate the number of repetitions for each sample
+        n = y.shape[0]
+        n2 = n + generate_samples
+
+        f = lambda x: x * rankings.sum() - n2
+        loss = lambda x: f(x) ** 2
+        loss_derivative = lambda x: 2 * f(x) * rankings.sum()
+
+        result = minimize(loss,
+              x0=np.ones([1]),
+              jac=loss_derivative)
+
+        repetitions = np.ceil(result.x * rankings).astype(np.uint32)
+        repetitions[0:(batch_size - int(repetitions.sum()) % batch_size)] += 1
+        return repetitions
+
+
+    @property
+    @lru_cache(maxsize=1)
+    def indices(self):
+        y, repetitions = self.y, self.repetitions
+
+        indices = []
+        for i in range(0, y.shape[0]):
+            indices.extend([i] * repetitions[i])
+        indices = np.array(indices, dtype=np.uint32)
+        return indices
+
+
     def __iter__(self):
         '''
         Returns an iterator which generates tuples of pairs X_batch, y_batch
@@ -63,72 +122,24 @@ class InputFlow:
         X, y = self.X, self.y
         batch_size = self.batch_size
         image_generator = self.image_generator
-
-        def get_num_repetitions():
-            if self.generate_samples == 0:
-                return np.ones([y.shape[0]]).astype(np.uint32)
-
-            def normalize(x, bounds=(0, 1)):
-                return ((x - x.min()) / (x.max() - x.min())) * bounds[1] + bounds[0]
-
-            def clamp(x, bounds=(0, 1)):
-                return np.maximum(np.minimum(x, bounds[1]), bounds[0])
-
-            # Set numpy random state
-            np.random.seed(self.random_state)
-
-            # Get char frequencies
-            char_f = y.sum(axis=1).sum(axis=0)
-            char_f_nz = char_f[char_f > 0]
-            char_f = clamp(char_f, (char_f_nz.min(), char_f_nz.max()))
-            char_f_score = 1 - np.power(normalize(char_f), 1)
-
-            # Calculate samples ranking
-            rankings = normalize(np.multiply(y, char_f_score.reshape(1, 1, -1)).sum(axis=2).sum(axis=1))
-
-
-            # Now calculate the number of repetitions for each sample
-            n = y.shape[0]
-            n2 = n + self.generate_samples
-
-            f = lambda x: x * rankings.sum() - n2
-            loss = lambda x: f(x) ** 2
-            loss_derivative = lambda x: 2 * f(x) * rankings.sum()
-
-            result = minimize(loss,
-                  x0=np.ones([1]),
-                  jac=loss_derivative)
-
-            repetitions = np.ceil(result.x * rankings).astype(np.uint32)
-            repetitions[0:(batch_size - int(repetitions.sum()) % batch_size)] += 1
-            return repetitions
-
-
-
-        # Get number of repetitions for each sample
-        repetitions = get_num_repetitions()
-
-        # Get the indices of the samples on the augmented data set
-        indices = []
-        for i in range(0, y.shape[0]):
-            indices.extend([i] * repetitions[i])
-        indices = np.array(indices, dtype=np.uint32)
-
-        # Shuffle the samples
-        if self.shuffle:
-            indices = sklearn.utils.shuffle(indices, random_state=self.random_state)
+        indices = self.indices
 
         # Dispatch the samples packed on batches
-        for i in range(0, y.shape[0]):
-            batch_indices = indices[i:i+batch_size]
-            X_batch, y_batch = X[batch_indices], y[batch_indices]
-            yield from islice(image_generator.flow(X_batch, y_batch, batch_size=batch_size, shuffle=False), 1)
+        while True:
+            # Shuffle the samples at each epoch
+            if self.shuffle:
+                indices = sklearn.utils.shuffle(indices, random_state=self.random_state)
+                  
+            for i in range(0, y.shape[0], batch_size):
+                batch_indices = indices[i:i+batch_size]
+                X_batch, y_batch = X[batch_indices], y[batch_indices]
+                yield from islice(image_generator.flow(X_batch, y_batch, batch_size=batch_size, shuffle=False), 1)
 
 
 
 if __name__ == '__main__':
     from dataset import CaptchaDataset
-    
+
     dataset = CaptchaDataset()
     it = iter(InputFlow(dataset.X, dataset.y, generate_samples=4000 ))
     X_batch, y_batch = next(it)

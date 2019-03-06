@@ -34,8 +34,7 @@ class Model(keras.models.Model):
         (an instance of the class InputFlow, generator object or iterator)
         '''
         if not steps_per_epoch and isinstance(generator, InputFlow):
-            num_samples, batch_size = generator.y.shape[0], generator.batch_size
-            steps_per_epoch = num_samples // batch_size
+            steps_per_epoch = generator.repetitions.sum() // generator.batch_size
             generator = iter(generator)
 
         def generator_wrapper():
