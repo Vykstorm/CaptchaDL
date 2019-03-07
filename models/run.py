@@ -14,6 +14,7 @@ This script provides a command line tool to run our deep learning models
 if __name__ == '__main__':
     # Create the cmd parser
     parser = argparse.ArgumentParser(description='Deep learning model CLI to classify captcha images')
+    parser.add_argument('model', nargs=1, type=str, help='The model you want to run')
     parser.add_argument('--train', '-t', action='store_true', default=False, help='Train your model')
     parser.add_argument('--batch-size', '-bs', nargs=1, default=[32], type=int, help='Batch size for the training phase')
     parser.add_argument('--epochs', '--iters', nargs=1, default=[10], type=int, help='Number of iterations of the training phase')
@@ -31,17 +32,26 @@ if __name__ == '__main__':
     parser.add_argument('--tensorboard', '-tb', action='store_true', default=False, help='Enable tensorboard logging')
     parser.add_argument('--tensorboard-log-dir', '--tb-log-dir', nargs=1, type=str, metavar='LOG-DIR', default=['./.tb-logs'], help='The directory where the tensorboard logs will be stored')
 
-    # Parse the arguments
     parsed_args = parser.parse_args()
 
-
+    # Required imports
     from dataset import CaptchaDataset
     from input import InputFlow
-    from dummy import DummyModel
     from keras.callbacks import EarlyStopping, TensorBoard, LambdaCallback
+    from dummy import DummyModel
 
-    model = DummyModel()
+    # Select the model to run
+    models = {
+        'dummy': DummyModel
+    }
 
+    model_name = parsed_args.model[0]
+    if model_name not in models:
+        parser.error('There is not model named {}'.format(model_name))
+    model = models[model_name]()
+
+
+    # Parse optional  arguments
 
     train, evaluate = parsed_args.train, parsed_args.eval
     test_size = parsed_args.test_size[0]
