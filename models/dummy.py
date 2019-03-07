@@ -23,8 +23,3 @@ class DummyModel(Model):
         x = Dense(output_units, activation='softmax', name='output')(x)
 
         return [x] * num_outputs
-
-
-
-if __name__ == '__main__':
-    DummyModel().run()
