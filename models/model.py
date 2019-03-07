@@ -3,6 +3,7 @@
 import keras
 from keras.layers import Input
 from keras.callbacks import EarlyStopping, TensorBoard, LambdaCallback
+import keras.backend as K
 import pandas as pd
 
 import argparse
@@ -61,7 +62,10 @@ class Model(keras.models.Model):
         if 'optimizer' not in kwargs:
             kwargs['optimizer'] = 'rmsprop'
         if 'metrics' not in kwargs:
-            kwargs['metrics'] = ['accuracy']
+            def char_accuracy(y_true, y_pred):
+                return K.mean(K.equal(K.argmax(y_true, axis=1), K.argmax(y_pred, axis=1)))
+
+            kwargs['metrics'] = [char_accuracy]
         return super().compile(**kwargs)
 
 
@@ -117,7 +121,7 @@ class Model(keras.models.Model):
         y_labels = np.argmax(y, axis=2)
 
         return {
-            'char_accuracy': char_accuracy(y_labels, y_pred_labels),
+            'average_char_accuracy': average_char_accuracy(y_labels, y_pred_labels),
             'word_accuracy': word_accuracy(y_labels, y_pred_labels),
             'match1_accuracy': match1_accuracy(y_labels, y_pred_labels),
             'match2_accuracy': match2_accuracy(y_labels, y_pred_labels),

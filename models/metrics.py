@@ -7,7 +7,7 @@ label predictions and the truth labels
 import numpy as np
 from functools import partial
 
-def char_accuracy(y_true, y_pred):
+def average_char_accuracy(y_true, y_pred):
     '''
     This function counts the number of correct character matches and divides it
     by the total number of characters
