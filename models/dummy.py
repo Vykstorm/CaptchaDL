@@ -20,21 +20,11 @@ class DummyModel(Model):
         x = Flatten()(x)
 
         x = Dense(40, activation='relu')(x)
-        x = Dense(output_units, activation='softmax')(x)
+        x = Dense(output_units, activation='softmax', name='output')(x)
 
         return [x] * num_outputs
 
 
 
 if __name__ == '__main__':
-    from dataset import CaptchaDataset
-    from input import InputFlow
-
-    dataset = CaptchaDataset()
-    input = InputFlow(dataset.X, dataset.y, batch_size=4, generate_samples=0)
-
-    model = DummyModel()
-    model.compile()
-    #model.summary()
-    model.fit_generator(input, verbose=True, epochs=2)
-    print(model.evaluate(dataset.X, dataset.y))
+    DummyModel().run()
