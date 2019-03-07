@@ -6,6 +6,7 @@ from keras.callbacks import EarlyStopping, TensorBoard, LambdaCallback
 import pandas as pd
 
 import argparse
+from shutil import rmtree
 
 from dataset import CaptchaDataset
 from metrics import *
@@ -158,9 +159,11 @@ class Model(keras.models.Model):
         parser.add_argument('--save', '-s', nargs=1, type=str, metavar='FILE', help='Saves the weights of the model to a file. This will always happen after training the model')
         parser.add_argument('--load', '-i', nargs=1, type=str, metavar='FILE', help='Initialize the weights of the model using the file. This will happen before training the model')
         parser.add_argument('--summary', '-ps', '--print-summary', action='store_true', default=False, help='Print model keras summary')
-        parser.add_argument('--gen-samples', '-g', nargs=1, type=float, metavar='FACTOR', default=0,
+        parser.add_argument('--gen-samples', '-g', nargs=1, type=float, metavar='FACTOR',
                             help='This will generate more samples on the dataset (same images but modified using affine transformations) for training the model.' +\
-                                'For example, if this value is 2, the train set size will grow by a factor of 2')
+                                'For example, if this value is 2, the train set size will grow up by a factor of 2')
+        parser.add_argument('--tensorboard', '-tb', action='store_true', default=False, help='Enable tensorboard logging')
+        parser.add_argument('--tensorboard-log-dir', '--tb-log-dir', nargs=1, type=str, metavar='LOG-DIR', default=['./.tb-logs'], help='The directory where the tensorboard logs will be stored')
 
         # Parse the arguments
         parsed_args = parser.parse_args()
@@ -174,6 +177,10 @@ class Model(keras.models.Model):
 
         batch_size = parsed_args.batch_size[0]
         epochs = parsed_args.epochs[0]
+        gen_samples = parsed_args.gen_samples[0] if parsed_args.gen_samples is not None else None
+
+        tensorboard = parsed_args.tensorboard
+        tensorboard_log_dir = parsed_args.tensorboard_log_dir[0]
 
         if not train and not evaluate:
             parser.error('You need to specify at least --train or --eval options')
@@ -183,6 +190,20 @@ class Model(keras.models.Model):
                 parser.error('Number of epochs must be a integer great than zero')
             if batch_size <= 0:
                 parser.error('Batch size must be an integer greater than zero')
+
+            if gen_samples is not None and gen_samples <= 1:
+                parser.error('Gen samples value must be a number greater than one')
+
+            if gen_samples is None:
+                gen_samples = 0
+            else:
+                gen_samples = gen_samples - 1
+
+            # Clean tensorboard logs
+            try:
+                rmtree(tensorboard_log_dir)
+            except:
+                pass
 
         if evaluate:
             if (test_size <= 0 or test_size >= 100):
@@ -219,15 +240,26 @@ class Model(keras.models.Model):
 
 
         if train:
+            # Training phase callbacks
             callbacks = [
+                # Stop the model if it doesnt improve
                 EarlyStopping(monitor='loss', min_delta=0.01, patience=2, verbose=verbose, mode='min'),
-                LambdaCallback(
-                    on_epoch_end=lambda epoch, logs: print(self.evaluate(X_test, y_test, verbose=False)))
             ]
+            if verbose:
+                # Evaluate test set at the end of each epoch
+                callbacks.append(
+                    LambdaCallback(on_epoch_end=lambda epoch, logs: print(self.evaluate(X_test, y_test, verbose=False)))
+                )
+
+            if tensorboard:
+                # Enable tensorboard logging
+                callbacks.append(
+                    TensorBoard(log_dir=tensorboard_log_dir, write_graph=True, update_freq='batch')
+                )
 
             # Train the model
             print('\nTraining the model...\n')
-            self.fit_generator(InputFlow(X_train, y_train, batch_size=batch_size),
+            self.fit_generator(InputFlow(X_train, y_train, batch_size=batch_size, generate_samples=gen_samples*y_train.shape[0]),
                                 verbose=verbose,
                                 epochs=epochs,
                                 callbacks=callbacks)
