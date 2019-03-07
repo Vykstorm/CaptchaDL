@@ -67,8 +67,8 @@ if __name__ == '__main__':
     tensorboard = parsed_args.tensorboard
     tensorboard_log_dir = parsed_args.tensorboard_log_dir[0]
 
-    if not train and not evaluate:
-        parser.error('You need to specify at least --train or --eval options')
+    #if not train and not evaluate:
+    #    parser.error('You need to specify at least --train or --eval options')
 
     if train:
         if epochs <= 0:
@@ -95,13 +95,12 @@ if __name__ == '__main__':
             parser.error('Test size must be a percentage value. A number in the range (0, 100)')
         test_size = float(test_size) / 100
 
+    # Compile the model
+    model.compile()
 
     # Print the summary of the model
     if print_summary:
         model.summary()
-
-    # Compile the model
-    model.compile()
 
     # Load the initial weights
     if load_weights_file:
