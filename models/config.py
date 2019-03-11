@@ -11,6 +11,7 @@ global_config = Config(join('config', 'global.conf'),
 result = global_config.validate(ConfigValidator(), preserve_errors=True)
 if result is not True:
     raise Exception('Invalid configuration: {}'.format(result))
+global_config = DictNamespace(dict(global_config), recursive=True)
 
 if __name__ == '__main__':
     print(global_config)
