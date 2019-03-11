@@ -39,10 +39,12 @@ if __name__ == '__main__':
     from input import InputFlow
     from keras.callbacks import EarlyStopping, TensorBoard, LambdaCallback
     from dummy import DummyModel
+    from ocr import OCRModel
 
     # Select the model to run
     models = {
-        'dummy': DummyModel
+        'dummy': DummyModel,
+        'ocr': OCRModel
     }
 
     model_name = parsed_args.model[0]
