@@ -132,7 +132,7 @@ class CaptchaDataset:
 
 
         # Try to reuse preprocessed data.
-        preprocessed_data_file = join(self.HOME_DIR, '.preprocessed-data.npz')
+        preprocessed_data_file = join(self.config.HOME_DIR, '.preprocessed-data.npz')
         try:
             data = dict(np.load(preprocessed_data_file))
         except:
