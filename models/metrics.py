@@ -58,7 +58,7 @@ class FloydhubKerasCallback(BaseLogger):
             raise ValueError('Stateful metrics parameter should be a list of training metric names to track')
 
         self.mode = mode
-        self.metrics = frozenset(metrics)
+        self.metrics = frozenset(metrics) if metrics is not None else None
         self.encoder = JSONEncoder()
 
     def report(self, metric, value, **kwargs):
