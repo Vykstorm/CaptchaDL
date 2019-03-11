@@ -6,7 +6,7 @@ datasets
 '''
 
 from os import listdir
-from os.path import isdir
+from os.path import isdir, isfile
 
 from re import match
 from itertools import product, count, chain
@@ -50,7 +50,7 @@ class CaptchaDataset:
                 raise ValidateError('Wrong number of image channels ({})'.format(dims[2]))
             return dims
 
-        def check_dataset_dir(value):
+        def check_dir_exists(value):
             value = is_string(value)
             if not isdir(value):
                 raise ValidateError('Directory {} doesnt exist'.format(value))
@@ -62,7 +62,7 @@ class CaptchaDataset:
                         stringify=True)
         result = config.validate(ConfigValidator({
             'image_dims': check_image_dims,
-            'dataset_dir': check_dataset_dir
+            'dataset_dir': check_dir_exists
         }), preserve_errors=True)
 
         # Raise an error if the configuration is not valid
@@ -132,13 +132,14 @@ class CaptchaDataset:
 
 
         # Try to reuse preprocessed data.
+        preprocessed_data_file = self.config.PREPROCESSED_DATA_FILE
         try:
-            data = dict(np.load('preprocessed-data.npz'))
+            data = dict(np.load(preprocessed_data_file))
         except:
             # Dataset had not be processed yet. Process it and save the results
             # in a file
             data = load_data()
-            np.savez_compressed('preprocessed-data.npz', **data)
+            np.savez_compressed(preprocessed_data_file, **data)
 
         # Return the preprocessed data
         data = DictNamespace(data)
@@ -297,7 +298,9 @@ class CaptchaDataset:
 
 if __name__ == '__main__':
     import pandas as pd
+
     dataset = CaptchaDataset()
+
     print('Loading captcha dataset....')
 
     df = pd.DataFrame({
