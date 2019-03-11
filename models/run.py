@@ -1,10 +1,12 @@
 
 
+from importlib import import_module
 import pandas as pd
-
+import json
 import argparse
 from shutil import rmtree
-
+from re import match
+from inspect import isclass
 
 '''
 This script provides a command line tool to run our deep learning models
@@ -34,24 +36,46 @@ if __name__ == '__main__':
 
     parsed_args = parser.parse_args()
 
-    # Required imports
+
+    # Required imports (we do it after parsing cmd args so that the user response
+    # when doing  run --help is minimum)
     from dataset import CaptchaDataset
+    from model import Model
     from input import InputFlow
     from keras.callbacks import EarlyStopping, TensorBoard, LambdaCallback
-    from dummy import DummyModel
-    from ocr import OCRModel
 
-    # Select the model to run
-    models = {
-        'dummy': DummyModel,
-        'ocr': OCRModel
-    }
+
+    # We need to know what model to run
+    models_config = {}
+    with open('models.json', 'r') as fp:
+        for entry in json.load(fp):
+            names = entry['name']
+
+            result = match('^([^\.]+)\.([^\.]+)$', entry['class'])
+            if not result:
+                raise Exception('Invalid models.json configuration file')
+            module, cls, path = result.group(1), result.group(2), result.group(0)
+
+            for name in names:
+                models_config[name] = {'module': module, 'class': cls, 'path': path}
 
     model_name = parsed_args.model[0]
-    if model_name not in models:
-        parser.error('There is not model named {}'.format(model_name))
-    model = models[model_name]()
 
+    if model_name not in models_config:
+        parser.error('There is not model named {}'.format(model_name))
+
+    model_config = models_config[model_name]
+
+    try:
+        model_cls = getattr(import_module(model_config['module']), model_config['class'])
+    except:
+        raise Exception('Failed loading {} class'.format(model_config['path']))
+
+    if not isclass(model_cls) or not issubclass(model_cls, Model):
+        raise Exception('{} is not a valid model class'.format(model_config['path']))
+
+    # Now we instantiate the model
+    model = model_cls()
 
     # Parse optional  arguments
 
