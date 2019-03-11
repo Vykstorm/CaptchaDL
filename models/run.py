@@ -7,6 +7,7 @@ import argparse
 from shutil import rmtree
 from re import match
 from inspect import isclass
+from os.path import join
 
 '''
 This script provides a command line tool to run our deep learning models
@@ -32,7 +33,7 @@ if __name__ == '__main__':
                         help='This will generate more samples on the dataset (same images but modified using affine transformations) for training the model.' +\
                             'For example, if this value is 2, the train set size will grow up by a factor of 2')
     parser.add_argument('--tensorboard', '-tb', action='store_true', default=False, help='Enable tensorboard logging')
-    parser.add_argument('--tensorboard-log-dir', '--tb-log-dir', nargs=1, type=str, metavar='LOG-DIR', default=['./.tb-logs'], help='The directory where the tensorboard logs will be stored')
+    parser.add_argument('--tensorboard-log-dir', '--tb-log-dir', nargs=1, type=str, metavar='LOG-DIR', default=['.tb-logs'], help='The directory where the tensorboard logs will be stored')
 
     parsed_args = parser.parse_args()
 
@@ -128,16 +129,17 @@ if __name__ == '__main__':
     if print_summary:
         model.summary()
 
+
+    dataset = CaptchaDataset()
+    X, y = dataset.X, dataset.y
+
     # Load the initial weights
     if load_weights_file:
         try:
-            model.load_weights(load_weights_file)
+            model.load_weights(join(dataset.config.HOME_DIR, load_weights_file))
         except:
             raise Exception('Failed to load your model weights from file {}'.format(load_weights_file))
 
-
-    data = CaptchaDataset()
-    X, y = data.X, data.y
 
     if train:
         # Split data in train / test sets
@@ -164,7 +166,7 @@ if __name__ == '__main__':
         if tensorboard:
             # Enable tensorboard logging
             callbacks.append(
-                TensorBoard(log_dir=tensorboard_log_dir, write_graph=True, update_freq='batch')
+                TensorBoard(log_dir=join(dataset.config.HOME_DIR, tensorboard_log_dir), write_graph=True, update_freq='batch')
             )
 
         # Train the model
@@ -177,7 +179,7 @@ if __name__ == '__main__':
     # Save model weights
     if save_weights_file:
         try:
-            model.save_weights(save_weights_file)
+            model.save_weights(join(dataset.config.HOME_DIR, save_weights_file))
         except:
             raise Exception('Failed to save your model weights to file {}'.format(save_weights_file))
 
