@@ -6,6 +6,5 @@ scikit-learn==0.20.2
 scipy==1.2.0
 seaborn==0.9.0
 tensorboard==1.11.0
-tensorflow==1.11.0
 scikit-image==0.14.1
 configobj==5.0.6
