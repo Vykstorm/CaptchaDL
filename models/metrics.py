@@ -74,7 +74,7 @@ class FloydhubKerasCallback(BaseLogger):
         if self.metrics:
             metrics &= self.metrics
         for metric in metrics:
-            self.report(metric, logs[metric].item(), step=batch)
+            self.report(metric, round(logs[metric].item(), 5), step=batch)
 
     def on_epoch_end(self, epoch, logs):
         if not self.mode == 'epoch':
@@ -84,4 +84,4 @@ class FloydhubKerasCallback(BaseLogger):
         if self.metrics:
             metrics &= self.metrics
         for metric in metrics:
-            self.report(metric, logs[metric].item(), step=epoch)
+            self.report(metric, round(logs[metric].item(), 5), step=epoch)
