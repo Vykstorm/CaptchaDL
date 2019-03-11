@@ -174,7 +174,7 @@ if __name__ == '__main__':
 
         if global_config.PRINT_TRAINING_METRICS:
             callbacks.append(
-                FloydhubKerasCallback(mode='batch')
+                FloydhubKerasCallback(mode='epoch')
             )
 
         # Train the model
