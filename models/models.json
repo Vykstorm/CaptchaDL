@@ -1,1 +1,10 @@
-[{"name": ["baseline", "test"], "class": "dummy.DummyModel"}]
+[
+    {
+        "name": ["baseline", "dummy"],
+        "class": "dummy.DummyModel"
+    },
+    {
+        "name": ["ocr"],
+        "class": "ocr.OCRModel"
+    }
+]
