@@ -49,3 +49,6 @@ geckodriver.log
 
 # Ignore numpy files
 *.npz
+
+# Ignore tensorboard logs
+*/.tb-logs/
