@@ -57,8 +57,8 @@ class CaptchaDataset:
             return value
 
         # Load and validate the configuration
-        config = Config('dataset.conf',
-                        configspec='dataset.spec.conf',
+        config = Config(join('config', 'dataset.conf'),
+                        configspec=join('config', 'dataset.spec.conf'),
                         stringify=True)
         result = config.validate(ConfigValidator({
             'image_dims': check_image_dims,
