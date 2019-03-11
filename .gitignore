@@ -42,3 +42,7 @@ config.rst
 
 package-lock.json
 geckodriver.log
+
+
+# Ignore keras model file formats
+*.h5
