@@ -6,7 +6,7 @@ datasets
 '''
 
 from os import listdir
-from os.path import isdir, isfile
+from os.path import isdir, isfile, join
 
 from re import match
 from itertools import product, count, chain
@@ -62,7 +62,7 @@ class CaptchaDataset:
                         stringify=True)
         result = config.validate(ConfigValidator({
             'image_dims': check_image_dims,
-            'dataset_dir': check_dir_exists
+            'dir': check_dir_exists
         }), preserve_errors=True)
 
         # Raise an error if the configuration is not valid
@@ -132,7 +132,7 @@ class CaptchaDataset:
 
 
         # Try to reuse preprocessed data.
-        preprocessed_data_file = self.config.PREPROCESSED_DATA_FILE
+        preprocessed_data_file = join(self.HOME_DIR, '.preprocessed-data.npz')
         try:
             data = dict(np.load(preprocessed_data_file))
         except:
