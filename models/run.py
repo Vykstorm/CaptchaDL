@@ -145,7 +145,7 @@ if __name__ == '__main__':
 
     if train:
         # Split data in train / test sets
-        train_samples, test_samples = data.train_test_split(test_size=test_size)
+        train_samples, test_samples = dataset.train_test_split(test_size=test_size)
 
         X_train, y_train = X[train_samples], y[train_samples]
         X_test, y_test = X[test_samples], y[test_samples]
