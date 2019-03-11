@@ -11,6 +11,11 @@
 #max_runtime: 3600
 #command: python train.py
 
+input:
+    - destination: data
+      source: vykstorm/datasets/captcha/2
+
+
 # You can also define multiple tasks to use with --task argument:
 #
 #task:
