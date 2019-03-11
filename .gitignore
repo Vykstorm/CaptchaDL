@@ -46,3 +46,6 @@ geckodriver.log
 
 # Ignore keras model file formats
 *.h5
+
+# Ignore numpy files
+*.npz
