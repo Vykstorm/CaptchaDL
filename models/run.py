@@ -8,6 +8,8 @@ from shutil import rmtree
 from re import match
 from inspect import isclass
 from os.path import join
+from config import global_config
+
 
 '''
 This script provides a command line tool to run our deep learning models
@@ -136,7 +138,7 @@ if __name__ == '__main__':
     # Load the initial weights
     if load_weights_file:
         try:
-            model.load_weights(join(dataset.config.HOME_DIR, load_weights_file))
+            model.load_weights(join(global_config.HOME_DIR, load_weights_file))
         except:
             raise Exception('Failed to load your model weights from file {}'.format(load_weights_file))
 
@@ -166,7 +168,7 @@ if __name__ == '__main__':
         if tensorboard:
             # Enable tensorboard logging
             callbacks.append(
-                TensorBoard(log_dir=join(dataset.config.HOME_DIR, tensorboard_log_dir), write_graph=True, update_freq='batch')
+                TensorBoard(log_dir=join(global_config.HOME_DIR, tensorboard_log_dir), write_graph=True, update_freq='batch')
             )
 
         # Train the model
@@ -179,7 +181,7 @@ if __name__ == '__main__':
     # Save model weights
     if save_weights_file:
         try:
-            model.save_weights(join(dataset.config.HOME_DIR, save_weights_file))
+            model.save_weights(join(global_config.HOME_DIR, save_weights_file))
         except:
             raise Exception('Failed to save your model weights to file {}'.format(save_weights_file))
 

@@ -25,7 +25,7 @@ from utils.dictnamespace import DictNamespace
 from configobj import ConfigObj as Config
 from validate import Validator as ConfigValidator, is_int_list, is_string
 from validate import ValidateError
-
+from config import global_config
 
 @singleton
 class CaptchaDataset:
@@ -132,7 +132,7 @@ class CaptchaDataset:
 
 
         # Try to reuse preprocessed data.
-        preprocessed_data_file = join(self.config.HOME_DIR, '.preprocessed-data.npz')
+        preprocessed_data_file = join(global_config.HOME_DIR, '.preprocessed-data.npz')
         try:
             data = dict(np.load(preprocessed_data_file))
         except:
