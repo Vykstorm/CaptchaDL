@@ -46,6 +46,7 @@ if __name__ == '__main__':
     from model import Model
     from input import InputFlow
     from keras.callbacks import EarlyStopping, TensorBoard, LambdaCallback
+    from metrics import FloydhubKerasCallback
 
 
     # We need to know what model to run
@@ -169,6 +170,11 @@ if __name__ == '__main__':
             # Enable tensorboard logging
             callbacks.append(
                 TensorBoard(log_dir=join(global_config.HOME_DIR, tensorboard_log_dir), write_graph=True, update_freq='batch')
+            )
+
+        if global_config.PRINT_TRAINING_METRICS:
+            callbacks.append(
+                FloydhubKerasCallback(mode='batch')
             )
 
         # Train the model
