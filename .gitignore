@@ -52,3 +52,6 @@ geckodriver.log
 
 # Ignore tensorboard logs
 */.tb-logs/
+
+# Ignore floydhub files
+.floydexpt
