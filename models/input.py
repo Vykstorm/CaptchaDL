@@ -40,7 +40,7 @@ class InputFlow:
         '''
         Initializes this instance
         :param X: A 4D array of size n.samples x height x width x n.channels with the image features
-        :param y: The categoric labels of the samples.
+        :param y: The categoric labels of the samples. (an
         :param shuffle: Set it to true to shuffle the samples before dispatching the batches
         :param random_state: Random state to shuffle the samples
         :param generate_samples: Its an optional integer. It sets the number of additional samples
@@ -129,7 +129,7 @@ class InputFlow:
             # Shuffle the samples at each epoch
             if self.shuffle:
                 indices = sklearn.utils.shuffle(indices, random_state=self.random_state)
-                  
+
             for i in range(0, y.shape[0], batch_size):
                 batch_indices = indices[i:i+batch_size]
                 X_batch, y_batch = X[batch_indices], y[batch_indices]

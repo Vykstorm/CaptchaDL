@@ -202,7 +202,7 @@ class CaptchaDataset:
         '''
         Returns the labels of the samples in the dataset.
 
-        It will be a 3D tensor of size n x m
+        It will be a 2D array of size n x m
         n is the number of samples in the dataset
         m will be the number of characters on each captcha image
         All the values will be in the interval [0, q) where q is the number of
@@ -215,7 +215,7 @@ class CaptchaDataset:
         '''
         Returns the categoric labels of the samples in the dataset.
 
-        A 3D tensor with size n x m x q
+        A 3D array with size n x m x q
         n is the number of samples in the dataset
         m will be the number of characters on each captcha image
         q is the number of character classes.
