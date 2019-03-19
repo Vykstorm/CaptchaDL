@@ -3,6 +3,11 @@
 '''
 This module is intented to provide helper methods & classes to load the captha text
 datasets
+
+You can do the next 3 lines of code to get the captcha images & its labels:
+from dataset import CaptchaDataset
+dataset = CaptchaDataset()
+X, y = dataset.X, dataset.y
 '''
 
 from os import listdir
