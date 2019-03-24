@@ -112,6 +112,12 @@ class InputFlow:
         indices = np.array(indices, dtype=np.uint32)
         return indices
 
+    def __len__(self):
+        '''
+        Returns the amount to be specified in the parameter 'steps_per_epoch' when
+        using fit_generator()
+        '''
+        return int(self.repetitions.sum().item()) // self.batch_size
 
     def __iter__(self):
         '''
