@@ -149,4 +149,8 @@ if __name__ == '__main__':
     dataset = CaptchaDataset()
     it = iter(InputFlow(dataset.X, dataset.y, generate_samples=4000 ))
     X_batch, y_batch = next(it)
-    print(X_batch.shape, y_batch.shape)
+
+    print('Batch shapes: X {}, y {}'.format(X_batch.shape, y_batch.shape))
+    texts = dataset.labels_to_text(y_batch.argmax(axis=2))
+    print(texts)
+    #H = np.histogram(y_batch.argmax(axis=2).flatten(), bins=y_batch.shape[2])[0]
