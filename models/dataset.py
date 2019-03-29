@@ -179,11 +179,12 @@ class CaptchaDataset:
 
 
     @property
-    def captcha_text_size(self):
+    def text_size(self):
         '''
         Returns the number of fixed characters on each captcha image
         '''
         return self.y.shape[1]
+
 
     @property
     def alphabet(self):
@@ -196,6 +197,13 @@ class CaptchaDataset:
         '''
         return self.data.alphabet
 
+    @property
+    def num_char_classes(self):
+        '''
+        Returns the number of unique characters classes on captcha image texts
+        (its the same as len(alphabet) )
+        '''
+        return len(self.alphabet)
 
     @property
     def y_labels(self):
@@ -209,6 +217,19 @@ class CaptchaDataset:
         character classes.
         '''
         return self.data.y_labels
+
+    def labels_to_text(self, y_labels):
+        '''
+        This method takes a 2D array of labels (same signature as the property y_labels)
+        Returns a list where each item is the text obtained translating the sequence of labels using
+        the regular alphabet
+        '''
+        alphabet = self.alphabet
+        texts = []
+        for labels in y_labels:
+            texts.append(''.join([alphabet[label] for label in labels]))
+        return texts
+
 
     @property
     def y(self):
