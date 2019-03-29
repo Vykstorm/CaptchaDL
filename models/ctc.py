@@ -14,12 +14,10 @@ from keras.callbacks import LambdaCallback
 from keras.utils import plot_model
 
 
-def ctc_lambda_func(args):
+def ctc_loss(labels, y_pred, input_length, label_length):
     '''
-    Helper method to compute CTC loss
+    CTC loss function
     '''
-    y_pred, labels, input_length, label_length = args
-    #y_pred = y_pred[:, 2:, :]
     return K.ctc_batch_cost(labels, y_pred, input_length, label_length)
 
 
@@ -123,10 +121,10 @@ class CTCModel(Model):
         y_pred = x
 
         # CTC cost
-        ctc_loss = Lambda(ctc_lambda_func, output_shape=(1,), name='CTC')([y_pred, labels, input_length, label_length])
+        x = Lambda(lambda args: ctc_loss(*args), output_shape=(1,), name='CTC')([labels, y_pred, input_length, label_length])
 
         # Real output of the model is the CTC cost
-        outputs = [ctc_loss]
+        outputs = [x]
 
         # Initialize super class
         super().__init__(inputs=list(inputs.values()), outputs=outputs)
@@ -199,7 +197,7 @@ class CTCModel(Model):
         a sequence of numeric labels. Each sequence will have a length equal or lower than dataset.text_size
         '''
         y_pred = model.test_func([X])[0]
-        out = K.get_value(K.ctc_decode(y_pred, np.repeat(dataset.text_size, X.shape[0]), greedy=False, top_paths=1, beam_width=100)[0][0])
+        out = K.get_value(K.ctc_decode(y_pred, np.repeat(CaptchaDataset().text_size, X.shape[0]), greedy=False, top_paths=1, beam_width=100)[0][0])
         return out
 
 
@@ -207,7 +205,7 @@ class CTCModel(Model):
         '''
         Its the same as predict() but it returns a list of strings instead of numeric label sequences
         '''
-        return dataset.labels_to_text(self.predict(X))
+        return CaptchaDataset().labels_to_text(self.predict(X))
 
 
     def plot(self, filename='model.png'):
@@ -215,3 +213,10 @@ class CTCModel(Model):
         Plot the model and save it on the filename specified as an image
         '''
         plot_model(self, to_file=filename, show_shapes=True, show_layer_names=True)
+
+
+
+
+if __name__ == '__main__':
+    model = CTCModel()
+    model.predict_text(CaptchaDataset().X[0:4])
