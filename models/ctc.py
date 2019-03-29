@@ -78,7 +78,7 @@ class CTCModel(Model):
     https://www.cs.toronto.edu/~graves/icml_2006.pdf
     I follow also this guide: https://www.dlology.com/blog/how-to-train-a-keras-model-to-recognize-variable-length-text/#disqus_thread
     '''
-    def __init__(self, text_size, num_char_classes, image_dims):
+    def __init__(self):
         '''
         Constructor
         :param text_size: This indicates the fixed amount of characters to be
@@ -88,15 +88,16 @@ class CTCModel(Model):
         :param image_dims: The dimensions of the input images. Must be a tuple
         with the next parameters: height x width x n.channels
         '''
-        self.text_size = text_size
-        self.num_char_classes = num_char_classes
-        self.image_dims = image_dims
+        dataset = CaptchaDataset()
+        self.text_size = dataset.text_size
+        self.num_char_classes = dataset.num_char_classes
+        self.image_dims = dataset.image_dims
         image_height, image_width = self.image_dims[0:2]
 
 
         # Model inputs
-        input_images = Input(shape=image_dims, name='images', dtype=np.float32)
-        labels = Input(name='labels', shape=(text_size,), dtype=np.int64)
+        input_images = Input(shape=self.image_dims, name='images', dtype=np.float32)
+        labels = Input(name='labels', shape=(self.text_size,), dtype=np.int64)
         input_length = Input(name='input_length', shape=(1,), dtype=np.int64)
         label_length = Input(name='label_length', shape=(1,), dtype=np.int64)
         inputs = {
@@ -105,6 +106,44 @@ class CTCModel(Model):
             'input_length': input_length,
             'label_length': label_length
         }
+        x = input_images
+
+        # Feature extraction
+        x = self.features(x)
+
+        # Dimensionallity reduction
+        x = Dense(256, activation='relu', kernel_initializer='he_normal', name='dim-reduction')(x)
+        x = Dense(128, activation='relu')(x)
+
+        # RNN layers
+        x = self.rnn(x)
+
+        # Output layers (softmax)
+        x = Dense(self.num_char_classes + 1, activation='softmax', kernel_initializer='he_normal', name='softmax')(x)
+        y_pred = x
+
+        # CTC cost
+        ctc_loss = Lambda(ctc_lambda_func, output_shape=(1,), name='CTC')([y_pred, labels, input_length, label_length])
+
+        # Real output of the model is the CTC cost
+        outputs = [ctc_loss]
+
+        # Initialize super class
+        super().__init__(inputs=list(inputs.values()), outputs=outputs)
+
+        # We define a function which takes the inputs and outputs y_pred
+        # We will decode softmax to get the predicted labels by the model
+        self.test_func = K.function([input_images], [y_pred])
+
+
+    def features(self, input_images):
+        '''
+        This method builts a cnn layers of the model
+        It takes as input a 3D tensor (input images) and returns the tensor with
+        the images features extracted
+        '''
+        image_height, image_width = self.image_dims[0:2]
+
         x = input_images
 
         # Transpose images
@@ -126,37 +165,24 @@ class CTCModel(Model):
         #x = Conv2D(32, kernel_size=(3, 3), activation='relu', padding='same', name='conv4')(x)
         #x = MaxPool2D((2, 2), name='pool4')(x)
 
+        # Merge 2nd and 3th dimension of the tensor
         x = Reshape([image_width // 16, (image_height // 16) * 128], name='image-features')(x)
 
-        # Dimensionallity reduction
-        x = Dense(256, activation='relu', kernel_initializer='he_normal', name='dim-reduction')(x)
-        x = Dense(128, activation='relu')(x)
+        return x
 
-        # LSTM net
+
+    def rnn(self, x):
+        '''
+        This method builts the rnn layers of the model
+        It takes a 3D tensor as input (x) and returns the output of rnn layers
+        '''
         #lstm_1 = LSTM(128, return_sequences=True, kernel_initializer='he_normal', name='lstm')(x)
         #lstm_2 = LSTM(128, return_sequences=True, kernel_initializer='he_normal', go_backwards=True, name='lstm-2')(x)
         # x = Concatenate()([lstm_1, lstm_2])
         gru_1 = GRU(256, return_sequences=True, name='gru')(x)
         gru_2 = GRU(256, return_sequences=True, go_backwards=True, name='gru2')(x)
         x = Concatenate()([gru_1, gru_2])
-
-        # Output layers (softmax)
-        x = Dense(64, activation='relu')(x)
-        x = Dense(num_char_classes + 1, activation='softmax', kernel_initializer='he_normal', name='softmax')(x)
-        y_pred = x
-
-        # CTC cost
-        ctc_loss = Lambda(ctc_lambda_func, output_shape=(1,), name='CTC')([y_pred, labels, input_length, label_length])
-
-        # Real output of the model is the CTC cost
-        outputs = [ctc_loss]
-
-        # Initialize super class
-        super().__init__(inputs=list(inputs.values()), outputs=outputs)
-
-        # We define a function which takes the inputs and outputs y_pred
-        # Layer we will decode softmax to get the predicted labels by the model
-        self.test_func = K.function([input_images], [y_pred])
+        return x
 
 
     def compile(self, **kwargs):
@@ -164,6 +190,7 @@ class CTCModel(Model):
         Compile the model
         '''
         super().compile(loss={'CTC': lambda y_true, y_pred: y_pred}, **kwargs)
+
 
     def predict(self, X):
         '''
@@ -175,6 +202,7 @@ class CTCModel(Model):
         out = K.get_value(K.ctc_decode(y_pred, np.repeat(dataset.text_size, X.shape[0]), greedy=False, top_paths=1, beam_width=100)[0][0])
         return out
 
+
     def predict_text(self, X):
         '''
         Its the same as predict() but it returns a list of strings instead of numeric label sequences
@@ -182,31 +210,8 @@ class CTCModel(Model):
         return dataset.labels_to_text(self.predict(X))
 
 
-
-if __name__ == '__main__':
-    import pandas as pd
-
-    K.clear_session()
-
-
-    dataset = CaptchaDataset()
-
-    # Build the model
-    model = CTCModel(text_size=dataset.text_size, num_char_classes=dataset.num_char_classes, image_dims=(50, 200, 1))
-    model.compile(optimizer='rmsprop')
-
-    # Print model
-    model.summary()
-    plot_model(model, to_file='model.png', show_shapes=True, show_layer_names=True)
-
-    X, y = dataset.X, dataset.y
-    generator = CTCInputFlow(X, y, batch_size=2, generate_samples=4000)
-    model.fit_generator(iter(generator), steps_per_epoch=20, epochs=1, verbose=True)
-
-
-    print(model.predict_text(dataset.X[0:4]))
-
-
-
-    #df = pd.DataFrame.from_dict({'Caption text': dataset.labels_to_text(y_labels), 'Predicted text': [text if len(text) > 0 else '--' for text in y_labels_pred_text]})
-    #print(df)
+    def plot(self, filename='model.png'):
+        '''
+        Plot the model and save it on the filename specified as an image
+        '''
+        plot_model(self, to_file=filename, show_shapes=True, show_layer_names=True)
