@@ -218,18 +218,6 @@ class CaptchaDataset:
         '''
         return self.data.y_labels
 
-    def labels_to_text(self, y_labels):
-        '''
-        This method takes a 2D array of labels (same signature as the property y_labels)
-        Returns a list where each item is the text obtained translating the sequence of labels using
-        the regular alphabet
-        '''
-        alphabet = self.alphabet
-        texts = []
-        for labels in y_labels:
-            texts.append(''.join([alphabet[label] for label in labels]))
-        return texts
-
 
     @property
     def y(self):
@@ -341,7 +329,7 @@ if __name__ == '__main__':
             dataset.config.DATASET_DIR,
             dataset.num_samples,
             dataset.image_dims,
-            dataset.captcha_text_size,
+            dataset.text_size,
             len(dataset.alphabet),
         ]
     })
