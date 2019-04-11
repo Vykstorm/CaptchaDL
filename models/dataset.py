@@ -47,12 +47,10 @@ class CaptchaDataset:
         '''
         # Helper methods to check config variables
         def check_image_dims(value):
-            dims = is_int_list(value, min=3, max=3)
+            dims = is_int_list(value, min=2, max=2)
             for dim in dims:
                 if dim <= 0:
                     raise ValidateError('Wrong image dimensions specified: {}'.format(dims))
-            if dims[2] not in range(1, 4):
-                raise ValidateError('Wrong number of image channels ({})'.format(dims[2]))
             return dims
 
         def check_dir_exists(value):
@@ -120,13 +118,14 @@ class CaptchaDataset:
                 y[i, j, :] = to_categorical(y_labels[i, j], len(alphabet))
 
             # Load images & process them
-            X = np.zeros([len(texts)] + image_dims, dtype=np.float32)
+            X = np.zeros([len(texts)] + image_dims + [1], dtype=np.float32)
 
             for i, image in zip(range(0, len(images)), images):
                 x = skimage.io.imread(data_dir + '/' + image)
                 # Make sure all images have the correct shape
-                if x.shape == image_dims:
-                    X[i, :, :, :] = x
+                if tuple(x.shape[0:2]) != tuple(image_dims):
+                    raise Exception('All images must have size: {}'.format(image_dims))
+                X[i, :, :, 0] = x[:, :, 0] / 255.0
 
             return {
                 'X': X,
