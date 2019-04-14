@@ -16,6 +16,7 @@ from os.path import isdir, isfile, join
 from re import match
 from itertools import product, count, chain
 from functools import lru_cache
+from math import floor
 
 # DL stack imports
 import numpy as np
@@ -94,7 +95,7 @@ class CaptchaDataset:
             config = self.config
             text_size = config.CAPTCHA_TEXT_SIZE
             data_dir = config.DATASET_DIR
-            image_dims = config.IMAGE_DIMS
+            image_dims = tuple(config.IMAGE_DIMS)
 
             # Get a list of images to be loaded
             images = listdir(data_dir)
@@ -121,20 +122,24 @@ class CaptchaDataset:
                 y[i, j, :] = to_categorical(y_labels[i, j], len(alphabet))
 
             # Load images & process them
-            X = np.zeros([len(texts)] + image_dims + [1], dtype=np.float32)
+            X = np.zeros((len(texts),) + image_dims + (1,), dtype=np.float32)
 
             for i, image in zip(range(0, len(images)), images):
+                # Read the image in gray scale colorspace
                 x = cv.cvtColor(cv.imread(data_dir + '/' + image), cv.COLOR_BGR2GRAY)
-                # Make sure all images have the correct shape
-                #if x.shape != tuple(image_dims):
-                #    raise Exception('All images must have size: {}'.format(image_dims))
 
                 # Apply adaptative thresholding
                 ret, x = cv.threshold(x, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
 
-                # Add borders with the background color to fill the gaps
                 h, w = x.shape
                 H, W = image_dims
+
+                # Reduce image size of it has greater shape than what we want
+                if h > H or w > W:
+                    x = cv.resize(x, image_dims, interpolation=cv.INTER_AREA)
+                    h, w = image_dims
+
+                # Add borders with the background color to fill the gaps
                 diffh, diffw = H - h, W - w
 
                 if diffh > 0 or diffw > 0:
