@@ -145,21 +145,12 @@ class InputFlow:
 
 if __name__ == '__main__':
     from dataset import CaptchaDataset
-    import pandas as pd
+    from utils import display_batch
 
     dataset = CaptchaDataset()
-    it = iter(InputFlow(dataset.X, dataset.y, generate_samples=4000 ))
+    it = iter(InputFlow(dataset.X, dataset.y, generate_samples=4000, batch_size=16 ))
     X_batch, y_batch = next(it)
 
+    print('Batch size: {}'.format(X_batch.shape[0]))
     print('Batch shapes: X {}, y {}'.format(X_batch.shape, y_batch.shape))
-    texts = dataset.labels_to_text(y_batch.argmax(axis=2))
-    print('Captions: ', texts)
-
-    H = chain([('char frequencies', 'value')],
-            zip(dataset.alphabet,
-                [[x] for x in np.histogram(y_batch.argmax(axis=2).flatten(), bins=y_batch.shape[2])[0]]
-            )
-        )
-    df = pd.DataFrame.from_dict(dict(list(H)))
-    df.set_index('char frequencies', drop=True, inplace=True)
-    print(df)
+    display_batch(X_batch, y_batch)
