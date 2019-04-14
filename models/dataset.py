@@ -10,23 +10,25 @@ dataset = CaptchaDataset()
 X, y = dataset.X, dataset.y
 '''
 
+# Standard python imports
 from os import listdir
 from os.path import isdir, isfile, join
-
 from re import match
 from itertools import product, count, chain
-
 from functools import lru_cache
 
+# DL stack imports
 import numpy as np
 import skimage
 from keras.utils import to_categorical
 import sklearn
 import sklearn.model_selection
 
+# Utils imports
 from utils.singleton import singleton
 from utils.dictnamespace import DictNamespace
 
+# Configuration imports
 from configobj import ConfigObj as Config
 from validate import Validator as ConfigValidator, is_int_list, is_string
 from validate import ValidateError
@@ -170,9 +172,9 @@ class CaptchaDataset:
     def X(self):
         '''
         Returns all the images in the dataset as 4D tensor of size:
-        n x H x W x C
+        n x H x W x 1
         Where n is the number of samples, H and W are the width and height of
-        the images and C the number of channels for each image
+        the images (The last dimension is the number of channels, which is 1)
         '''
         return self.data.X
 
@@ -195,6 +197,7 @@ class CaptchaDataset:
         position that have on this list
         '''
         return self.data.alphabet
+
 
     @property
     def num_char_classes(self):
@@ -235,6 +238,25 @@ class CaptchaDataset:
         y_labels is equivalent to np.argmax(y, axis=2)
         '''
         return self.data.y
+
+
+    def labels_to_text(self, y_labels):
+        '''
+        Converts labels to text
+        :param y: Must be 2D array with numeric labels of size n x t
+        Characters are represented with the numeric labels
+        where the value indicates its position in the alphabet
+        Other numeric values like -1 or >= len(alphabet) will refer to the 'blank' character (space)
+
+        :return: Returns a 2D array of characters with size n x t
+        '''
+        def to_char(label):
+            alphabet = self.alphabet
+            if label < 0 or label >= len(alphabet):
+                return ' '
+            return self.alphabet[label]
+        return np.vectorize(to_char, ['S1'])(y_labels)
+
 
 
     def train_test_split(self, test_size=0.15, shuffle=True, random_state=None,
