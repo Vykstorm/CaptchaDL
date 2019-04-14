@@ -1,7 +1,7 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-
+from math import ceil, sqrt
 
 def display_batch(X_batch, y_batch):
     '''
@@ -19,7 +19,7 @@ def display_batch(X_batch, y_batch):
     n = X_batch.shape[0]
 
     # Number of column subplots per row
-    cols = 4
+    cols = ceil(sqrt(n))
 
     # Number of rows
     rows = n // cols
@@ -27,7 +27,7 @@ def display_batch(X_batch, y_batch):
         rows += 1
 
     # Create rows x cols subplots
-    fig, ax = plt.subplots(rows, cols, figsize=(12, 3*rows))
+    fig, ax = plt.subplots(rows, cols, figsize=(8, 8))
 
     for i in range(0, rows):
         for j in range(0, cols):
