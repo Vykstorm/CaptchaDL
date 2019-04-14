@@ -23,6 +23,7 @@ import skimage
 from keras.utils import to_categorical
 import sklearn
 import sklearn.model_selection
+import cv2 as cv
 
 # Utils imports
 from utils.singleton import singleton
@@ -123,11 +124,36 @@ class CaptchaDataset:
             X = np.zeros([len(texts)] + image_dims + [1], dtype=np.float32)
 
             for i, image in zip(range(0, len(images)), images):
-                x = skimage.io.imread(data_dir + '/' + image)
+                x = cv.cvtColor(cv.imread(data_dir + '/' + image), cv.COLOR_BGR2GRAY)
                 # Make sure all images have the correct shape
-                if tuple(x.shape[0:2]) != tuple(image_dims):
-                    raise Exception('All images must have size: {}'.format(image_dims))
-                X[i, :, :, 0] = x[:, :, 0] / 255.0
+                #if x.shape != tuple(image_dims):
+                #    raise Exception('All images must have size: {}'.format(image_dims))
+
+                # Apply adaptative thresholding
+                ret, x = cv.threshold(x, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
+
+                # Add borders with the background color to fill the gaps
+                h, w = x.shape
+                H, W = image_dims
+                diffh, diffw = H - h, W - w
+
+                if diffh > 0 or diffw > 0:
+                    top, left = diffh // 2, diffw // 2
+                    bottom, right = top, left
+
+                    if diffh % 2 > 0:
+                        top += 1
+                    if diffw % 2 > 0:
+                        left += 1
+
+                    x = cv.copyMakeBorder(x, top, bottom, left, right, cv.BORDER_CONSTANT, value=(255, 255, 255))
+
+                # Normalize image pixel intensities in the range [0, 1]
+                x = x.astype(np.float32) / 255
+
+                # Finally store the preprocessed image
+                X[i, :, :, 0] = x
+
 
             return {
                 'X': X,
