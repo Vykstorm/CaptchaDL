@@ -148,7 +148,7 @@ if __name__ == '__main__':
     from utils import display_batch
 
     dataset = CaptchaDataset()
-    it = iter(InputFlow(dataset.X, dataset.y, generate_samples=4000, batch_size=16 ))
+    it = iter(InputFlow(dataset.X, dataset.y, generate_samples=4000, batch_size=4 ))
     X_batch, y_batch = next(it)
 
     print('Batch size: {}'.format(X_batch.shape[0]))
