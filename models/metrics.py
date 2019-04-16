@@ -5,7 +5,7 @@ label predictions and the truth labels
 '''
 
 import numpy as np
-from functools import partial
+from functools import partial, update_wrapper
 from keras.callbacks import BaseLogger
 from json import JSONEncoder
 import keras.backend as K
@@ -20,54 +20,65 @@ n is interpreted as the number of samples classified
 m is the number of labels on each sample
 
 Value -1 in the predicted labels will represent a 'blank' space character (null character)
+
 '''
 
+
+def metric(f):
+    '''
+    This is a decorator for all metric functions
+    '''
+    def wrapper(y_true, y_pred, categorical_labels=False, *args, **kwargs):
+        y_true, y_pred = K.cast(y_true, np.int64), K.cast(y_pred, np.int64)
+
+        if categorical_labels:
+            y_true, y_pred = K.argmax(y_true, axis=2), K.argmax(y_pred, axis=2)
+
+        return f(y_true, y_pred, *args, **kwargs)
+
+    update_wrapper(wrapper, f)
+    return wrapper
+
+
+@metric
 def char_accuracy(y_true, y_pred):
     '''
     This metric return the mean of characters matched correctly in total
     '''
-    return K.mean(K.cast(K.flatten(y_true == y_pred), np.float32))
+    return K.mean(K.cast(K.flatten(K.equal(y_true, y_pred)), np.float32))
 
-
-def matchk_accuracy(k, y_true, y_pred):
+@metric
+def matchk_accuracy(y_true, y_pred, k=2):
     '''
     This metric returns the mean of sample predictions that at least matches k labels correctly
     k must be a number in the range [1, m] where m is the number of labels on each sample
     '''
-    return K.mean(K.sum(K.cast(y_true == y_pred, np.float32), axis=1) >= k)
+    return K.mean(K.cast(K.greater_equal(K.sum(K.cast(K.equal(y_true, y_pred), np.int64), axis=1), k), np.float32))
 
+@metric
 def fullmatch_accuracy(y_true, y_pred):
     '''
     This metric returns the mean of sample predictions that matches all the labels correctly
     '''
-    #return K.prod(K.cast(y_true == y_pred, np.uint8), axis=1)
-    return K.mean(K.prod(K.cast(y_true == y_pred, np.float32), axis=1))
+    return K.mean(K.prod(K.cast(K.equal(y_true, y_pred), np.float32), axis=1))
 
 
-match1_accuracy = partial(matchk_accuracy, 1)
-match2_accuracy = partial(matchk_accuracy, 2)
-match3_accuracy = partial(matchk_accuracy, 3)
-match4_accuracy = partial(matchk_accuracy, 4)
-match5_accuracy = partial(matchk_accuracy, 5)
 
-
-def summary(y_true, y_pred):
+def summary(y_true, y_pred, categorical_labels=False):
     '''
     Prints on stdout different metrics comparing the truth and
     predicted labels specified as arguments
     '''
-    def metrics():
-        methods = {}
-        methods['char_acc'] = char_accuracy
-        for k in range(1, y_true.shape[1]+1):
-            methods['match{}_acc'.format(k)] = partial(matchk_accuracy, k)
-        methods['fullmatch_acc'] = fullmatch_accuracy
 
-        for metric, method in methods.items():
-            yield metric, K.get_value(method(y_true, y_pred))
+    metrics = {
+        'char_acc': char_accuracy(y_true, y_pred, categorical_labels),
+        'fullmatch_acc': fullmatch_accuracy(y_true, y_pred, categorical_labels)
+    }
+    for k in range(1, y_true.shape[1]):
+        metrics['match{}_acc'.format(k)] = matchk_accuracy(y_true, y_pred, categorical_labels, k=k)
 
     df = pd.DataFrame.from_dict(
-        dict([(metric, [value]) for metric, value in metrics()] + [('-', 'values')])
+        dict([(metric, [round(K.get_value(value), 5)]) for metric, value in metrics.items()] + [('-', 'values')])
     )
     df.set_index(['-'], inplace=True)
 
@@ -126,16 +137,78 @@ class FloydhubKerasCallback(BaseLogger):
 
 
 if __name__ == '__main__':
+    '''
+    Module unit test
+    '''
     import numpy as np
+    import unittest
+    from unittest import TestCase
+
+    class MetricsUnitCase(TestCase):
+        def test_char_accuracy(self):
+            '''
+            Test char_accuracy metric
+            '''
+            y_true = np.array([
+                [0, 0, 1, 0],
+                [1, 0, 1, 1]],
+            dtype=np.int64)
+
+            y_pred = np.array([
+                [0, 1, 1, 0],
+                [-1, 1, 1, 1]],
+            dtype=np.int64)
+
+            self.assertEqual(K.get_value(char_accuracy(y_true, y_pred)), 5/8)
+
+
+        def test_fullmatch_accuracy(self):
+            '''
+            Test fullmatch accuracy metric
+            '''
+            y_true = np.array([
+                [0, 1, 1, 0],
+                [0, 0, 1, 0]],
+            dtype=np.int64)
+
+            y_pred = np.array([
+                [0, 1, 1, 0],
+                [0, 0, 0, 1]],
+            dtype=np.int64)
+
+            self.assertEqual(K.get_value(fullmatch_accuracy(y_true, y_pred)), 0.5)
+
+
+        def test_matchk_accuracy(self):
+            '''
+            Test matchk accuracy metric
+            '''
+            y_true = np.array([
+                [0, 1, 1, 0],
+                [1, 0, 1, 0],
+                [0, 0, 1, 1]],
+            dtype=np.int64)
+
+            y_pred = np.array([
+                [0, 1, 1, 1],
+                [1, 1, 1, 1],
+                [1, 0, 0, 0]],
+            dtype=np.int64)
+
+            self.assertEqual(K.get_value(matchk_accuracy(y_true, y_pred, k=1)), 1)
+            self.assertAlmostEqual(K.get_value(matchk_accuracy(y_true, y_pred, k=2)), 2/3, delta=0.01)
+            self.assertAlmostEqual(K.get_value(matchk_accuracy(y_true, y_pred, k=3)), 1/3, delta=0.01)
+
     y_true = np.array([
         [0, 1, 1, 0],
-        [1, 0, 1, 0]],
+        [1, 0, 1, 0],
+        [0, 0, 1, 1]],
     dtype=np.int64)
 
     y_pred = np.array([
-        [0, 1, 1, 0],
-        [-1, 1, 1, 1]],
+        [0, 1, 1, 1],
+        [1, 1, 1, 1],
+        [1, 0, 0, 0]],
     dtype=np.int64)
 
-
-    summary(y_true, y_pred)
+    unittest.main()
