@@ -28,11 +28,14 @@ def metric(f):
     '''
     This is a decorator for all metric functions
     '''
-    def wrapper(y_true, y_pred, categorical_labels=False, *args, **kwargs):
+    def wrapper(y_true, y_pred, *args, **kwargs):
         y_true, y_pred = K.cast(y_true, np.int64), K.cast(y_pred, np.int64)
 
-        if categorical_labels:
-            y_true, y_pred = K.argmax(y_true, axis=2), K.argmax(y_pred, axis=2)
+        if len(y_true.get_shape().as_list()) == 3:
+            y_true = K.argmax(y_true, axis=2)
+
+        if len(y_pred.get_shape().as_list()) == 3:
+            y_pred = K.argmax(y_pred, axis=2)
 
         return f(y_true, y_pred, *args, **kwargs)
 
@@ -62,20 +65,34 @@ def fullmatch_accuracy(y_true, y_pred):
     '''
     return K.mean(K.prod(K.cast(K.equal(y_true, y_pred), np.float32), axis=1))
 
+'''
+Aliases for different values of k in matchk_accuracy
+'''
+def match1_accuracy(y_true, y_pred):
+    return matchk_accuracy(y_true, y_pred, k=1)
+
+def match2_accuracy(y_true, y_pred):
+    return matchk_accuracy(y_true, y_pred, k=2)
+
+def match3_accuracy(y_true, y_pred):
+    return matchk_accuracy(y_true, y_pred, k=3)
+
+def match4_accuracy(y_true, y_pred):
+    return matchk_accuracy(y_true, y_pred, k=4)
 
 
-def summary(y_true, y_pred, categorical_labels=False):
+def summary(y_true, y_pred):
     '''
     Prints on stdout different metrics comparing the truth and
     predicted labels specified as arguments
     '''
 
     metrics = {
-        'char_acc': char_accuracy(y_true, y_pred, categorical_labels),
-        'fullmatch_acc': fullmatch_accuracy(y_true, y_pred, categorical_labels)
+        'char_acc': char_accuracy(y_true, y_pred),
+        'fullmatch_acc': fullmatch_accuracy(y_true, y_pred)
     }
     for k in range(1, y_true.shape[1]):
-        metrics['match{}_acc'.format(k)] = matchk_accuracy(y_true, y_pred, categorical_labels, k=k)
+        metrics['match{}_acc'.format(k)] = matchk_accuracy(y_true, y_pred, k=k)
 
     df = pd.DataFrame.from_dict(
         dict([(metric, [round(K.get_value(value), 5)]) for metric, value in metrics.items()] + [('-', 'values')])
@@ -198,17 +215,5 @@ if __name__ == '__main__':
             self.assertEqual(K.get_value(matchk_accuracy(y_true, y_pred, k=1)), 1)
             self.assertAlmostEqual(K.get_value(matchk_accuracy(y_true, y_pred, k=2)), 2/3, delta=0.01)
             self.assertAlmostEqual(K.get_value(matchk_accuracy(y_true, y_pred, k=3)), 1/3, delta=0.01)
-
-    y_true = np.array([
-        [0, 1, 1, 0],
-        [1, 0, 1, 0],
-        [0, 0, 1, 1]],
-    dtype=np.int64)
-
-    y_pred = np.array([
-        [0, 1, 1, 1],
-        [1, 1, 1, 1],
-        [1, 0, 0, 0]],
-    dtype=np.int64)
 
     unittest.main()
