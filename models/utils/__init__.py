@@ -1,7 +1,13 @@
 
+'''
+Some helper methods are defined in this script
+'''
+
+
 import matplotlib.pyplot as plt
 import numpy as np
 from math import ceil, sqrt
+
 
 def display_batch(X_batch, y_batch):
     '''
