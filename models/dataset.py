@@ -128,9 +128,6 @@ class CaptchaDataset:
                 # Read the image in gray scale colorspace
                 x = cv.cvtColor(cv.imread(data_dir + '/' + image), cv.COLOR_BGR2GRAY)
 
-                # Apply adaptative thresholding
-                ret, x = cv.threshold(x, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
-
                 h, w = x.shape
                 H, W = image_dims
 
@@ -151,7 +148,7 @@ class CaptchaDataset:
                     if diffw % 2 > 0:
                         left += 1
 
-                    x = cv.copyMakeBorder(x, top, bottom, left, right, cv.BORDER_CONSTANT, value=(255, 255, 255))
+                    x = cv.copyMakeBorder(x, top, bottom, left, right, cv.BORDER_REPLICATE, value=(255, 255, 255))
 
                 # Normalize image pixel intensities in the range [0, 1]
                 x = x.astype(np.float32) / 255
