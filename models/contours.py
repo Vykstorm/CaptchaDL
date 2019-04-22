@@ -78,8 +78,8 @@ class Contour:
                 img = child.draw_bbox(img, show_children)
         return self.bbox.draw(img)
 
-    def _draw(img):
-        return cv.drawContours(img, self.points, -1, (0,0,255))
+    def _draw(img, color=(0, 255, 0)):
+        return cv.drawContours(img, self.points, -1, tuple(color))
 
 
 
@@ -129,18 +129,18 @@ class AABBRect:
     def __str__(self):
         return '({}, {}), {} x {}'.format(self.left, self.top, self.width, self.height)
 
-    def draw(self, img):
+    def draw(self, img, color=(0, 255, 0)):
         '''
         Draws this rectangle over the specified image
         '''
         return cv.rectangle(img,
                             (self.left,self.top), (self.left+self.width,self.top+self.height),
-                            (0,255,0), 1)
+                            tuple(color), 1)
 
 
 def find_contours(img):
     '''
-    This method find the finds the contours in the given image
+    This method finds the contours in the given image
     It is optimized for the captcha dataset images
     :param img: Must be an image on gray format
     :return Returns a list of contour instances
@@ -212,13 +212,19 @@ def draw_bbox_contours(img, contours, show_children=False):
 
 
 if __name__ == '__main__':
+    # Unitary test
+    # The next code loads a couple of images and extract their contours (they will be
+    # printed over the images)
+
     from input import InputFlow
     from dataset import CaptchaDataset
     import matplotlib.pyplot as plt
+    import pandas as pd
 
     dataset = CaptchaDataset()
     input = iter(InputFlow(dataset.X, dataset.y, batch_size=1))
 
+    # Extract the contours of the images
     def extract_contours():
         while True:
             X_batch, y_batch = next(input)
@@ -228,11 +234,10 @@ if __name__ == '__main__':
 
 
     rows, cols = 3, 2
-
     samples = list(islice(extract_contours(), 0, rows*cols))
 
+    # Show the images and draw the bounding boxes of the contours
     fig, ax = plt.subplots(3, 2, figsize=(10, 20))
-
     for i in range(0, rows):
         for j in range(0, cols):
             contours, img = samples[i * cols + j]
@@ -240,5 +245,4 @@ if __name__ == '__main__':
             plt.imshow(img)
             plt.xticks([])
             plt.yticks([])
-
     plt.show()
