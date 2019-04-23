@@ -43,11 +43,32 @@ class Contour:
         '''
         return self.bbox.ratio
 
-    def bbox_fill_ratio(self):
+
+    def bbox_pixels(self, img):
         '''
-        Its the same as contour.bbox.fill_ratio
+        Its the same as contour.bbox.bbox_pixels()
         '''
-        return self.bbox.fill_ratio
+        return self.bbox.bbox_pixels(img)
+
+
+    def bbox_fill_ratio(self, img):
+        '''
+        Its the same as contour.bbox.fill_ratio()
+        '''
+        return self.bbox.fill_ratio(img)
+
+    def area(self):
+        '''
+        Returns the area covered by this contour
+        '''
+        return cv.contourArea(self.points)
+
+    def extent(self):
+        '''
+        Returns the ratio between the areas of the contour and its bounding rectangle
+        '''
+        return self.area / self.bbox_area
+
 
     def extent(self):
         '''
@@ -59,7 +80,7 @@ class Contour:
 
     def draw(self, img, show_children=False):
         '''
-        Draws this contour over the image specified (must be on RGB format)
+        Draws this contour over the image specified.  Must be an RGB image with uint8 data type
         :param show_children: When this is set to True, it also draws children contours
         '''
         if show_children:
@@ -70,8 +91,8 @@ class Contour:
 
     def draw_bbox(self, img, show_children=False):
         '''
-        Draws this contour's bounding box over the image specified (must be on RGB format)
-        :param show_children: When this is set to True, it also draws children contours
+        Its the same as self.bbox.draw(). Also if show_children is True, it calls
+        draw_bbox() on children contours
         '''
         if show_children:
             for child in self.children:
@@ -87,7 +108,6 @@ class AABBRect:
     '''
     Represents an AABB Rectangle
     '''
-
     def __init__(self, left, right, top, bottom):
         '''
         :param left: Left side of the rectangle
@@ -126,25 +146,42 @@ class AABBRect:
         '''
         return self.width / self.height
 
+
+    def pixels(self, img):
+        '''
+        Returns the pixels of the specified image that are inside this bounding
+        box limits
+        '''
+        return img[self.top:self.top+self.height, self.left:self.left+self.width]
+
+    def fill_ratio(self, img):
+        '''
+        Returns the ratio of the number of non-black pixels (intensity greater than 0)
+        in the specified image (inside the limits of the bounding box)
+        '''
+        return (self.pixels(img) > 0).flatten().mean()
+
     def __str__(self):
         return '({}, {}), {} x {}'.format(self.left, self.top, self.width, self.height)
 
     def draw(self, img, color=(0, 255, 0)):
         '''
-        Draws this rectangle over the specified image
+        Draws this rectangle over the specified image. Must be an RGB image with uint8 data type
         '''
-        return cv.rectangle(img,
-                            (self.left,self.top), (self.left+self.width,self.top+self.height),
-                            tuple(color), 1)
-
+        img = cv.rectangle(img,
+                        (self.left,self.top), (self.left+self.width,self.top+self.height),
+                        tuple(color), 1)
+        return img
 
 def find_contours(img):
     '''
     This method finds the contours in the given image
     It is optimized for the captcha dataset images
-    :param img: Must be an image on gray format
+    :param img: Must be an image on gray format (2D array of float32 values with the pixel intensities
+    in the range [0, 1])
     :return Returns a list of contour instances
     '''
+    img = (img * 255).astype(np.uint8)
 
     # Invert the image
     inverted = 255 - img
@@ -164,7 +201,7 @@ def find_contours(img):
 
     # Find contours
 
-    contours, hierachy = cv.findContours(processed, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE )
+    contours, hierachy = cv.findContours(processed, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE)
 
     n = len(contours)
     contour_parent = hierachy[0, :, 3]
@@ -194,7 +231,8 @@ def find_contours(img):
 
 def draw_contours(img, contours, show_children=False):
     '''
-    Draws all the contours over the specified image
+    Draws all the contours over the specified image (must be a 2D array
+    with float32 values with the intensities of the pixels in the range [0, 1])
     :param show_children: If this is disabled, only top level contours are drawn
     '''
     for contour in contours:
@@ -202,10 +240,6 @@ def draw_contours(img, contours, show_children=False):
     return img
 
 def draw_bbox_contours(img, contours, show_children=False):
-    '''
-    Draws the bounded boxes of the contours over the specified image
-    :param show_children: If this is disabled, only top level contours are drawn
-    '''
     for contour in contours:
         img = contour.draw_bbox(img, show_children)
     return img
@@ -221,28 +255,34 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     import pandas as pd
 
+    # Get a batch of samples of size n
+    n = 9
     dataset = CaptchaDataset()
-    input = iter(InputFlow(dataset.X, dataset.y, batch_size=1))
+    input = iter(InputFlow(dataset.X, dataset.y, batch_size=n))
 
-    # Extract the contours of the images
-    def extract_contours():
-        while True:
-            X_batch, y_batch = next(input)
-            img = (X_batch[0, :, :, 0] * 255).astype(np.uint8)
-            contours = find_contours(img)
-            yield contours, draw_bbox_contours(cv.cvtColor(img, cv.COLOR_GRAY2RGB), contours, show_children=False)
+    X_batch, y_batch = next(input)
 
+    # Extract a list of contours for each sample image
 
-    rows, cols = 3, 2
-    samples = list(islice(extract_contours(), 0, rows*cols))
+    contours = []
+    for k in range(0, n):
+        contours.append(find_contours(X_batch[k, :, :, 0]))
+
+    # Show contour properties
 
     # Show the images and draw the bounding boxes of the contours
-    fig, ax = plt.subplots(3, 2, figsize=(10, 20))
+    rows, cols = n // 2, 2
+
+    fig, ax = plt.subplots(rows, cols, figsize=(20, 10))
     for i in range(0, rows):
         for j in range(0, cols):
-            contours, img = samples[i * cols + j]
+            k = i * cols + j
             plt.sca(ax[i, j])
-            plt.imshow(img)
+
+            img = X_batch[k, :, :, 0]
+            img = draw_bbox_contours(cv.cvtColor((img * 255).astype(np.uint8), cv.COLOR_GRAY2RGB), contours[k], show_children=False)
+            plt.imshow(img, cmap='gray')
+
             plt.xticks([])
             plt.yticks([])
     plt.show()
