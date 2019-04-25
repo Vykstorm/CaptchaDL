@@ -13,7 +13,7 @@ class Contour:
         Initializes this instance
         :param points: Must be a list the list of points that defines the contour
         See OpenCV contours
-        :param img: Must be the image used to extract the contours from
+        :param source_img: Image where this contour was extracted from
         :param children: A list of optional inner contours
         '''
         self.points = points
@@ -221,20 +221,37 @@ def find_contours(img):
     inverted = 255 - img
 
     # Apply thresholding
-    ret, thresholded = cv.threshold(inverted, 180, 255, cv.THRESH_BINARY)
+    ret, thresholded = cv.threshold(inverted, 140, 255, cv.THRESH_BINARY)
 
-    # Apply morphological transformation to clean image
+    # Apply median blur to reduce image noise
+    blurred = cv.medianBlur(thresholded, 3)
+
+    # Apply a mask to eliminate tiny objects and horizontal lines
     kernel = np.array([
-        [0, 1, 0],
-        [0, 1, 0],
-        [0, 1, 0]
+        [0, 0, 1, 0, 0],
+        [0, 0, 1, 0, 0],
+        [0, 0, 1, 0, 0],
+        [0, 0, 1, 0, 0],
+        [0, 0, 1, 0, 0],
+    ]).astype(np.uint8)
+    kernel2 = np.array([
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 1, 1, 1, 1, 1, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0]
     ]).astype(np.uint8)
 
-    processed = cv.morphologyEx(thresholded, cv.MORPH_ERODE, kernel)
-    processed = cv.morphologyEx(processed, cv.MORPH_DILATE, kernel)
+    mask = cv.morphologyEx(blurred, cv.MORPH_OPEN, kernel)
+    mask = cv.morphologyEx(mask, cv.MORPH_DILATE, kernel2)
+    processed = cv.bitwise_and(blurred, mask)
+
+    # Detect edges
+    #edges = cv.Laplacian(processed, 5).clip(0, 255).astype(np.uint8)
 
     # Find contours
-
     contours, hierachy = cv.findContours(processed, cv.RETR_CCOMP, cv.CHAIN_APPROX_SIMPLE)
 
     n = len(contours)
