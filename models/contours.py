@@ -58,13 +58,6 @@ class Contour:
 
 
     @property
-    def bbox_fill_ratio(self):
-        '''
-        Its the same as contour.bbox.fill_ratio
-        '''
-        return self.bbox.fill_ratio
-
-    @property
     def area(self):
         '''
         Returns the area covered by this contour
@@ -124,7 +117,6 @@ class Contour:
         return {
             'bbox_width': self.bbox_width,
             'bbox_height': self.bbox_height,
-            'bbox_fill_ratio': self.bbox_fill_ratio,
             'area': self.area,
             'extent': self.extent,
             'perimeter': self.perimeter
@@ -175,15 +167,6 @@ class ContourBBox:
         Returns the ratio: width/height of the rectangle
         '''
         return self.width / self.height
-
-
-    @property
-    def fill_ratio(self):
-        '''
-        Returns the ratio of the number of non-black pixels (intensity greater than 0)
-        in the image used to extract the contours (inside the limits of the bounding box)
-        '''
-        return (self.pixels(self.inner_contour.source_img) > 0).flatten().mean()
 
 
     def pixels(self, img):
@@ -328,8 +311,8 @@ if __name__ == '__main__':
 
     # Show contour properties
     contour_bbox_width, contour_bbox_height = [], []
-    contour_bbox_fill_ratio = []
     contour_extent, contour_area = [], []
+    contour_perimeter = []
     contour_id = []
     for k in range(0, n):
         for i in range(0, len(contours[k])):
@@ -337,17 +320,17 @@ if __name__ == '__main__':
             contour_id.append('Sample {}, index {}'.format(k, i))
             contour_bbox_width.append(contour.bbox_width)
             contour_bbox_height.append(contour.bbox_height)
-            contour_bbox_fill_ratio.append(contour.bbox_fill_ratio)
             contour_extent.append(contour.extent)
             contour_area.append(contour.area)
+            contour_perimeter.append(contour.perimeter)
 
     df = pd.DataFrame.from_dict({
         'ids': contour_id,
         'bbox_width': contour_bbox_width,
         'bbox_height': contour_bbox_height,
-        'bbox_fill_ratio': contour_bbox_fill_ratio,
-        'extent': contour_extent,
-        'area': contour_area
+        'extent': np.round(contour_extent, 2),
+        'area': np.round(contour_area, 2),
+        'perimeter': np.round(contour_perimeter, 2)
     })
     print(df)
 

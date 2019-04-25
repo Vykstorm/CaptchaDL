@@ -8,7 +8,6 @@ the method find_contours() in the file contours.py
 A sample will have the next data attributes:
 - Bounding box width: Width of the bounding box that encloses the contour
 - Bounding box height: Height of the bounding " "
-- Bounding box fill ratio: Ratio of white pixels inside the bounding box " "
 - Area: Area covered by the contour (not its bounding box)
 - Extent: Coefficient between the contour area and its bounding box area
 - Perimiter: Perimiter of the contour
@@ -25,15 +24,24 @@ from os.path import join
 DATASET_FILE = join(global_config.HOME_DIR, '.contours-data.csv')
 
 def load_data():
+    '''
+    Load contour data previously stored
+    '''
     try:
         return pd.read_csv(DATASET_FILE)
     except:
-        return pd.DataFrame(columns=['bbox_width', 'bbox_height', 'bbox_fill_ratio', 'area', 'extent', 'perimeter', 'num_chars'])
+        return pd.DataFrame(columns=['bbox_width', 'bbox_height', 'area', 'extent', 'perimeter', 'num_chars'])
 
 def save_data(data):
+    '''
+    Save the data of contours
+    '''
     data.to_csv(DATASET_FILE, index=False)
 
 def save_sample(attrs):
+    '''
+    Save the data of a contour
+    '''
     save_data(load_data().append(attrs, ignore_index=True))
 
 
