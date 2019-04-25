@@ -3,6 +3,18 @@ import cv2 as cv
 import numpy as np
 from itertools import islice
 from functools import lru_cache
+import pickle
+
+
+
+# This loads a support vector machine to classify contours and predict the number
+# of characters inside them
+with open('.contour-classifier', 'rb') as file:
+    contour_clasifier = pickle.load(file)
+
+with open('.contour-classifier-preprocessor', 'rb') as file:
+    contour_classifier_preprocessor = pickle.load(file)
+
 
 class Contour:
     '''
@@ -107,6 +119,36 @@ class Contour:
                 img = child.draw_bbox(img, show_children)
         return self.bbox.draw(img)
 
+
+    @property
+    @lru_cache(maxsize=1)
+    def num_chars(self):
+        '''
+        :return Returns an intenger number in the range [0, 5] indicating the
+        predicted number of chars inside this contour.
+        '''
+        return self.num_chars_proba.argmax().item()
+
+    @property
+    def num_chars_proba(self):
+        '''
+        Returns an array of size m where the element at index k is the predicted probability
+        of this contour of having k characters inside it
+        All elements are in the interval [0, 1] and their sum gives 1
+        The probability of this contour of having more than m characters is considered 0
+        '''
+        model = contour_clasifier
+        scaler = contour_classifier_preprocessor
+
+        X = np.array([
+            self.bbox_width, self.bbox_height,
+            self.area, self.extent, self.perimeter
+        ], dtype=np.float32).reshape([1, -1])
+
+        X = scaler.transform(X)
+
+        y = model.predict_proba(X)[0]
+        return y
 
     @property
     @lru_cache(maxsize=1)
@@ -312,7 +354,7 @@ if __name__ == '__main__':
     # Show contour properties
     contour_bbox_width, contour_bbox_height = [], []
     contour_extent, contour_area = [], []
-    contour_perimeter = []
+    contour_perimeter, contour_num_chars = [], []
     contour_id = []
     for k in range(0, n):
         for i in range(0, len(contours[k])):
@@ -323,6 +365,7 @@ if __name__ == '__main__':
             contour_extent.append(contour.extent)
             contour_area.append(contour.area)
             contour_perimeter.append(contour.perimeter)
+            contour_num_chars.append(contour.num_chars)
 
     df = pd.DataFrame.from_dict({
         'ids': contour_id,
@@ -330,10 +373,11 @@ if __name__ == '__main__':
         'bbox_height': contour_bbox_height,
         'extent': np.round(contour_extent, 2),
         'area': np.round(contour_area, 2),
-        'perimeter': np.round(contour_perimeter, 2)
+        'perimeter': np.round(contour_perimeter, 2),
+        'num_chars_predicted': contour_num_chars
     })
     print(df)
-
+    print(contours[0][0].num_chars_proba)
 
     # Show the images and draw the bounding boxes of the contours
     rows, cols = n // 2, 2
@@ -348,6 +392,8 @@ if __name__ == '__main__':
             img = draw_bbox_contours(cv.cvtColor((img * 255).astype(np.uint8), cv.COLOR_GRAY2RGB), contours[k], show_children=False)
             plt.imshow(img, cmap='gray')
 
+            plt.title('Num chars predicted: {}'.format(', '.join([str(contour.num_chars) for contour in contours[k]])))
             plt.xticks([])
             plt.yticks([])
+    plt.tight_layout()
     plt.show()
