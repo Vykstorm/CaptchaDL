@@ -20,17 +20,16 @@ class Contour:
     '''
     Represents a contour extracted from an image
     '''
-    def __init__(self, points, img, children=[]):
+    def __init__(self, points, children=[]):
         '''
         Initializes this instance
         :param points: Must be a list the list of points that defines the contour
         See OpenCV contours
-        :param source_img: Image where this contour was extracted from
         :param children: A list of optional inner contours
         '''
         self.points = points
-        self.source_img = img
         self.children = []
+
 
     @property
     @lru_cache(maxsize=1)
@@ -91,13 +90,6 @@ class Contour:
         return cv.arcLength(self.points, True)
 
 
-    def bbox_pixels(self, img):
-        '''
-        Its the same as contour.bbox.pixels()
-        '''
-        return self.bbox.bbox_pixels(img)
-
-
     def draw(self, img, show_children=False):
         '''
         Draws this contour over the image specified.  Must be an RGB image with uint8 data type
@@ -118,6 +110,12 @@ class Contour:
             for child in self.children:
                 img = child.draw_bbox(img, show_children)
         return self.bbox.draw(img)
+
+    def extract_bbox_pixels(self, img):
+        '''
+        Its an alias of self.bbox.extract_pixels
+        '''
+        return self.bbox.extract_pixels(img)
 
 
     @property
@@ -211,10 +209,10 @@ class ContourBBox:
         return self.width / self.height
 
 
-    def pixels(self, img):
+    def extract_pixels(self, img):
         '''
-        Returns the pixels of the specified image that are inside this bounding
-        box limits
+        Returns an image of the same size as this bounding box extracting the pixels
+        from the image
         '''
         return img[self.top:self.top+self.height, self.left:self.left+self.width]
 
@@ -299,7 +297,7 @@ def find_contours(img):
     while len(B) > 0:
         C = B & set([contour_parent[k] for k in A])
         for j in C:
-            items[j] = Contour(contours[j], processed, [items[k] for k in contour_children[j]])
+            items[j] = Contour(contours[j], [items[k] for k in contour_children[j]])
         B -= C
 
     return [items[k] for k in range(0, n) if contour_parent[k] == -1]
@@ -315,7 +313,6 @@ def draw_contours(img, contours, show_children=False):
     for contour in contours:
         img = contour.draw(img, show_children)
     return img
-
 
 
 def draw_bbox_contours(img, contours, show_children=False):
@@ -377,7 +374,6 @@ if __name__ == '__main__':
         'num_chars_predicted': contour_num_chars
     })
     print(df)
-    print(contours[0][0].num_chars_proba)
 
     # Show the images and draw the bounding boxes of the contours
     rows, cols = n // 2, 2
