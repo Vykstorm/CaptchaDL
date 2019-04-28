@@ -180,7 +180,9 @@ def find_chars(img, char_size, num_chars=5):
             frames.extend(splits)
 
     processed_frames = map(partial(process_image, dsize=char_size), frames)
-    return [frame.astype(np.float32) / 255 for frame in processed_frames]
+
+    return np.stack([(frame.astype(np.float32) / 255) for frame in processed_frames], axis=0)
+
 
 
 if __name__ == '__main__':
