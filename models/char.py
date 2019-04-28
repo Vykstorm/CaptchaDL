@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import cv2 as cv
 from math import floor, ceil
+from functools import partial
 from scipy.interpolate import UnivariateSpline
 from scipy.optimize import minimize
 from itertools import product, repeat, permutations, combinations_with_replacement, chain
@@ -55,7 +56,7 @@ def find_char_separators(img, num_chars=2):
 
 
 
-def process_image(img, dsize=(50, 30)):
+def process_image(img, dsize):
     '''
     This method takes an image and process it (its optimized for images that contains
     characters inside from the captcha dataset):
@@ -178,7 +179,7 @@ def find_chars(img, char_size, num_chars=5):
             splits = split_array(contours[k].extract_bbox_pixels(img), separators, axis=1)
             frames.extend(splits)
 
-    processed_frames = map(process_image, frames)
+    processed_frames = map(partial(process_image, dsize=char_size), frames)
     return [frame.astype(np.float32) / 255 for frame in processed_frames]
 
 
@@ -202,13 +203,13 @@ if __name__ == '__main__':
             X_batch, y_batch = next(input)
 
             # Find characters in the image
-            frames = find_chars(X_batch[0, :, :, 0], char_size=(50, 35), num_chars=dataset.text_size)
+            frames = find_chars(X_batch[0, :, :, 0], char_size=(40, 40), num_chars=dataset.text_size)
 
 
             # Show all the extracted characters
 
             n = len(frames)
-            fig, ax = plt.subplots(1, n, figsize=(6, 2))
+            fig, ax = plt.subplots(1, n, figsize=(10, 2))
 
             for i in range(0, n):
                 plt.sca(ax[i])
