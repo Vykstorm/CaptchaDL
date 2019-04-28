@@ -7,7 +7,7 @@ from math import floor
 
 from input import InputFlow
 from dataset import CaptchaDataset
-from char import find_chars
+from chars import find_chars
 
 
 '''
