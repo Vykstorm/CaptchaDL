@@ -9,6 +9,7 @@ import pickle
 
 # This loads a support vector machine to classify contours and predict the number
 # of characters inside them
+
 with open('.contour-classifier', 'rb') as file:
     contour_clasifier = pickle.load(file)
 
@@ -18,9 +19,9 @@ with open('.contour-classifier-preprocessor', 'rb') as file:
 
 class Contour:
     '''
-    Represents a contour extracted from an image
+    Represents a contour extracted from an image.
     '''
-    def __init__(self, points, children=[]):
+    def __init__(self, points, img, children=[]):
         '''
         Initializes this instance
         :param points: Must be a list the list of points that defines the contour
@@ -28,6 +29,7 @@ class Contour:
         :param children: A list of optional inner contours
         '''
         self.points = points
+        self.img = img
         self.children = []
 
 
@@ -67,7 +69,6 @@ class Contour:
         '''
         return self.bbox.ratio
 
-
     @property
     def area(self):
         '''
@@ -89,6 +90,12 @@ class Contour:
         '''
         return cv.arcLength(self.points, True)
 
+    @property
+    def bbox_mask(self):
+        '''
+        Its an alias of self.bbox.mask
+        '''
+        return self.bbox.mask
 
     def draw(self, img, show_children=False):
         '''
@@ -208,6 +215,14 @@ class ContourBBox:
         '''
         return self.width / self.height
 
+    @property
+    @lru_cache(maxsize=1)
+    def mask(self):
+        '''
+        Returns an image of the same size as this bounding box where pixels are
+        painted with white color if falls inside the contour
+        '''
+        return self.extract_pixels(self.inner_contour.img)
 
     def extract_pixels(self, img):
         '''
@@ -236,7 +251,6 @@ def find_contours(img):
     It is optimized for the captcha dataset images
     :param img: Must be an image on gray format (2D array of float32 values with the pixel intensities
     in the range [0, 1])
-    :return Returns a list of contour instances
     '''
     img = (img * 255).astype(np.uint8)
 
@@ -297,11 +311,10 @@ def find_contours(img):
     while len(B) > 0:
         C = B & set([contour_parent[k] for k in A])
         for j in C:
-            items[j] = Contour(contours[j], [items[k] for k in contour_children[j]])
+            items[j] = Contour(contours[j], processed, [items[k] for k in contour_children[j]])
         B -= C
 
     return [items[k] for k in range(0, n) if contour_parent[k] == -1]
-
 
 
 def draw_contours(img, contours, show_children=False):
@@ -316,6 +329,10 @@ def draw_contours(img, contours, show_children=False):
 
 
 def draw_bbox_contours(img, contours, show_children=False):
+    '''
+    Draw all the bounding boxes of the contours indicated over the specified image
+    :param show_children: if thisis disable, only top level contours are drawn
+    '''
     for contour in contours:
         img = contour.draw_bbox(img, show_children)
     return img
