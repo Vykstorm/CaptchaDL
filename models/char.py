@@ -1,16 +1,18 @@
 
 
+from math import floor, ceil
+from functools import partial
+from itertools import product, repeat, permutations, combinations_with_replacement, chain
 
-from contours import find_contours
 import numpy as np
 import pandas as pd
 import cv2 as cv
-from math import floor, ceil
-from functools import partial
 from scipy.interpolate import UnivariateSpline
 from scipy.optimize import minimize
-from itertools import product, repeat, permutations, combinations_with_replacement, chain
 
+from input import InputFlow
+from dataset import CaptchaDataset
+from contours import find_contours
 
 
 def find_char_separators(img, num_chars=2):
@@ -187,9 +189,6 @@ def find_chars(img, char_size, num_chars=5):
 
 if __name__ == '__main__':
     # Unitary test
-
-    from input import InputFlow
-    from dataset import CaptchaDataset
     import matplotlib.pyplot as plt
     from utils import waitKey
 
