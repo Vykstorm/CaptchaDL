@@ -13,4 +13,6 @@ var
 *.swp
 .DS_Store
 
-*.npz
+# *.npz
+# .preprocessed-data.npz
+.char-classifier-weights.hdf5
