@@ -73,6 +73,7 @@ if __name__ == '__main__':
     dataset = CaptchaDataset()
     X, y = dataset.X, dataset.y
 
+
     # Build the model
     model = OCRModel()
 
@@ -81,7 +82,7 @@ if __name__ == '__main__':
     # the model
 
     indices = np.random.choice(np.arange(0, dataset.num_samples), size=9)
-    X_batch, y_batch = X[indices], y[indices]
+    X_batch, y_batch = next(iter(InputFlow(X, y, batch_size=9)))
 
     # Predict texts inside images
     texts = [''.join([char.item().decode() for char in text]) for text in dataset.labels_to_text(y_batch.argmax(axis=2))]
@@ -105,9 +106,12 @@ if __name__ == '__main__':
     plt.tight_layout()
 
 
-    # Now evaluate the model with all the dataset
+
+    # Now evaluate the model on a test set & show metric scores
+    X_test, y_test = next(iter(InputFlow(X, y, batch_size=1000)))
+
     print('Predicting captcha text images...')
-    print('Number of images: {}'.format(X.shape[0]))
+    print('Number of images: {}'.format(X_test.shape[0]))
     y_labels = y.argmax(axis=2)
     y_pred_labels = model.predict_labels(X)
 
