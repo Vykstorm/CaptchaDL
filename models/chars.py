@@ -147,7 +147,7 @@ def find_chars(img, char_size, num_chars=5):
 
     # All valid configurations (n0, n1, ..., nk) such that n0 + n1 + ... + nk = num_chars
     configs = filter(lambda x: np.sum(x) == num_chars, combinations_with_replacement(range(0, num_chars+1), k))
-    configs = list(chain.from_iterable(map(lambda config: permutations(config, k), configs)))
+    configs = list(frozenset(chain.from_iterable(map(lambda config: permutations(config, k), configs))))
     assert len(configs) > 0
 
     configs = np.array(configs, dtype=np.uint8)
