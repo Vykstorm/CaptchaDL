@@ -94,7 +94,7 @@ Also the script char_classifier.py provides a CLI to train/evaluate the convolut
 python char_classifier.py --help
 ```
 
-Execute the next line to quickly evaluate the model
+Execute the next line to quickly evaluate it
 ```
 python char_classifier.py -v --eval --num-samples 200
 ```
@@ -104,7 +104,7 @@ Accuracy score & confusion matrix will be displayed
 ![](images/confusion_matrix.png)
 
 
-Finally, run ```python ocr.py``` to test the model. a window will be popped up and will show a few predictions done by the model.
+Finally, run ```python ocr.py``` to test the whole system. a window will be popped up and will show a few predictions.
 
 ![](images/predictions.png)
 
