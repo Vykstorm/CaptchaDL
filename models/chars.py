@@ -157,7 +157,7 @@ def find_chars(img, char_size, num_chars=5):
     scores = np.zeros([nc]).astype(np.float32)
 
     for i in range(0, nc):
-        scores[i] = np.prod(P[np.arange(0, k), np.array(configs[i])])
+        scores[i] = np.prod(P[np.arange(0, k), configs[i]])
 
     # Get the best configuration
     best_config = configs[np.argmax(scores)]
